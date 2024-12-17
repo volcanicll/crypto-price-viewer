@@ -8,6 +8,7 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
   private _cryptoData: any[] = [];
   private _searchTerm: string = "";
   private _limit: number = 200; // 添加新属性来存储限制数量
+  private _cachedHtml: string | undefined; // 添加缓存属性
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -22,7 +23,11 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this._extensionUri],
     };
 
-    webviewView.webview.html = this._getHtmlForWebview();
+    // 检查是否有缓存的 HTML 内容
+    if (!this._cachedHtml) {
+      this._cachedHtml = this._getHtmlForWebview(); // 生成并缓存 HTML
+    }
+    webviewView.webview.html = this._cachedHtml; // 使用缓存的 HTML
     await this.updatePrices();
 
     // Handle messages from the webview
@@ -49,6 +54,13 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async updatePrices() {
+    const loadingElement = this._view?.webview.html.includes("loading")
+      ? "loading"
+      : null; // 获取加载元素的 ID
+    if (loadingElement) {
+      this._view?.webview.postMessage({ type: "showLoading" }); // 显示加载指示器
+    }
+
     try {
       const response = await axios.get(
         "https://api.coingecko.com/api/v3/coins/markets",
@@ -66,6 +78,10 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
       this._updateView();
     } catch (error) {
       vscode.window.showErrorMessage("Failed to fetch cryptocurrency prices");
+    } finally {
+      if (loadingElement) {
+        this._view?.webview.postMessage({ type: "hideLoading" }); // 隐藏加载指示器
+      }
     }
   }
 
@@ -212,6 +228,31 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
             font-size: 11px;
           }
 
+          .tooltip {
+            position: relative;
+            display: inline-block;
+          }
+          .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            border-radius: 5px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the icon */
+            left: 50%;
+            margin-left: -60px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+          }
+          .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+          }
+
           @media (max-width: 300px) {
             .controls-row {
               flex-direction: column;
@@ -219,6 +260,34 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
             }
             .button, .limit-select {
               width: 100%;
+            }
+          }
+
+          .supply-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+          }
+          .supply-percentage, .trading-volume {
+            flex: 1;
+            text-align: left;
+          }
+
+          .skeleton {
+            background: linear-gradient(90deg, #2c3e50 25%, #34495e 50%, #2c3e50 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px; /* 添加圆角 */
+          }
+
+          @keyframes loading {
+            0% {
+              background-position: 200% 0;
+            }
+            100% {
+              background-position: 0 0;
             }
           }
         </style>
@@ -238,6 +307,20 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
           <div class="search-row">
             <input type="text" id="searchInput" placeholder="搜索币名或代号...">
           </div>
+        </div>
+        <div id="loading" style="display: none;">
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="height: 20px; margin-bottom: 8px;"></div>
         </div>
         <div id="cryptoList"></div>
         <script>
@@ -262,10 +345,14 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
               if (!listElement) return;
 
               const html = data.map((coin, index) => {
+               const supplyPercentage = ((coin.circulating_supply / coin.total_supply) * 100).toFixed(2);
                 return \`
                   <div class="crypto-item">
                     <span class="rank-number">#\${coin.market_cap_rank}</span>
-                    <img src="\${coin.image}" class="crypto-icon" alt="\${coin.name}">
+                    <div class="tooltip">
+                      <img src="\${coin.image}" class="crypto-icon" alt="\${coin.name}">
+                      <span class="tooltiptext">\${coin.description || '无描述'}</span>
+                    </div>
                     <div class="crypto-info">
                       <div>
                         <span class="crypto-name">\${coin.name}</span>
@@ -277,6 +364,10 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
                           \${coin.price_change_percentage_24h.toFixed(2)}%
                         </span>
                         <span class="market-cap">市值: \${formatMarketCap(coin.market_cap)}</span>
+                      </div>
+                       <div class="supply-info">
+                        <span class="supply-percentage">已供应量占比: \${supplyPercentage}%</span>
+                        <span class="trading-volume">24小时交易量: $\${coin.total_volume.toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -351,6 +442,14 @@ class CryptoViewProvider implements vscode.WebviewViewProvider {
                 case 'update':
                   cryptoData = message.data;
                   sortAndUpdateList();
+                  break;
+                case 'showLoading': // 显示骨架屏
+                  document.getElementById('loading').style.display = 'block';
+                  document.getElementById('cryptoList').style.display = 'none'; // 隐藏实际内容
+                  break;
+                case 'hideLoading': // 隐藏骨架屏
+                  document.getElementById('loading').style.display = 'none';
+                  document.getElementById('cryptoList').style.display = 'block'; // 显示实际内容
                   break;
               }
             });

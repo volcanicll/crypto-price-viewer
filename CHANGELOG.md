@@ -1,9 +1,29 @@
-# Change Log
+## 版本更新说明
 
-All notable changes to the "coin-price" extension will be documented in this file.
+### 更新内容
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+在本次版本更新中，我们对加密货币价格查看器插件进行了以下重要改进：
 
-## [Unreleased]
+1. **添加了 Logo**: 插件现在包含了一个新的图标，以提升用户界面的视觉效果。
 
-- Initial release
+2. **骨架屏**: 在数据加载期间，用户将看到一个骨架屏，以改善用户体验并提供更好的反馈。
+
+3. **供应量占比**: 现在可以查看每种加密货币的已供应量占比，帮助用户更好地理解市场动态。
+
+4. **24 小时交易额**: 新增了每种加密货币的 24 小时交易额信息，提供更全面的市场数据。
+
+### 功能亮点
+
+- **实时价格更新**: 继续支持每 30 秒自动更新价格数据。
+- **手动刷新**: 用户可以随时手动刷新价格数据以获取最新信息。
+
+### 数据来源
+
+数据依然通过 CoinGecko API 获取，确保信息的准确性和及时性。
+
+### 注意事项
+
+- 所有价格均以美元(USD)为单位显示。
+- 请确保您的 VS Code 版本为 ^1.85.0 或更高，以获得最佳体验。
+
+感谢您使用 Crypto Price Viewer，我们期待您的反馈与建议！
