@@ -4,7 +4,7 @@
   "description": "View real-time prices of top 100-500 cryptocurrencies",
   "publisher": "volcanic",
   "repository": "https://github.com/volcanicll/crypto-price-viewer.git",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -15,6 +15,7 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "icon": "resources/logo.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
