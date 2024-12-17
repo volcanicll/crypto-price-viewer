@@ -1,0 +1,70 @@
+{
+  "name": "crypto-price-viewer",
+  "displayName": "Crypto Price Viewer",
+  "description": "View real-time prices of top 100-500 cryptocurrencies",
+  "publisher": "volcanic",
+  "repository": "https://github.com/volcanicll/crypto-price-viewer.git",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "crypto-explorer",
+          "title": "Crypto Price",
+          "icon": "resources/crypto.svg"
+        }
+      ]
+    },
+    "views": {
+      "crypto-explorer": [
+        {
+          "id": "cryptoPriceView",
+          "name": "Crypto Prices",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "crypto-price-viewer.showPrices",
+        "title": "Crypto: Show Top 200 Prices"
+      },
+      {
+        "command": "crypto-price-viewer.refresh",
+        "title": "Crypto: Refresh Prices"
+      },
+      {
+        "command": "crypto-price-viewer.search",
+        "title": "Crypto: Search Token"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "node-fetch": "^2.6.1"
+  }
+}
