@@ -1,26 +1,114 @@
-# Crypto Price Viewer
+# Crypto Price Viewer for VS Code
 
-VS Code 加密货币价格查看器插件，显示市值前 200 的加密货币实时价格信息。
+[English](#english) | [中文](#中文)
+
+---
+
+# English
+
+A VS Code extension for real-time cryptocurrency price tracking and market data visualization.
+
+## Features
+
+🚀 **Real-time Market Data**
+
+- Display real-time prices of top 200 cryptocurrencies
+- 24h price changes and trading volume
+- Market cap ranking and detailed market data
+
+📊 **Supply Information**
+
+- Circulating and total supply
+- Supply ratio visualization
+- Lock-up information for non-fully circulating tokens
+
+🔍 **Search & Filter**
+
+- Search by name and symbol
+- Sort by market cap and price change
+- Flexible data filtering options
+
+⚡ **Performance**
+
+- Data persistence across view switches
+- Multiple data sources with automatic failover
+- Smart data caching strategy
+
+## Installation
+
+Search for "Crypto Price Viewer" in VS Code extensions or visit [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=volcanic.crypto-price-viewer).
+
+## Usage
+
+1. Click the cryptocurrency icon in VS Code sidebar
+2. Use the search box to find specific tokens
+3. Click refresh button to update data
+4. Hover to view detailed information
+5. Click on a token to view full market data
+
+## Data Sources
+
+- Primary: CoinGecko API
+- Backup: Binance API
+- Automatic failover and retry mechanism
+
+## Privacy Notice
+
+This extension does not collect any personal information. It only fetches market data from public APIs.
+
+## Contributing
+
+Issues and Pull Requests are welcome!
+
+## License
+
+[MIT License](LICENSE)
+
+---
+
+# 中文
+
+用于实时加密货币价格跟踪和市场数据可视化的 VS 代码扩展。
 
 ## 功能
 
-- 显示前 200 个加密货币的实时价格，支持搜索
-- 包含币种图标、当前价格、24 小时涨跌幅、市值、已供应量占比、24 小时交易额等信息
-- 自动每 30 秒更新一次数据
-- 支持手动刷新价格数据
+🚀**实时市场数据**
+
+-显示排名前 200 位的加密货币的实时价格
+-24 小时价格变化和成交量 -市值排名和详细的市场数据
+
+📊**提供信息**
+
+--流通和总供应量 -供应率可视化 -非全流通令牌的锁定信息
+
+🔍**搜索与筛选**
+
+-按名称和符号搜索 -按市值和价格变化排序 -灵活的数据过滤选项
+
+⚡**性能**
+
+-跨视图交换机的数据持久化 -具有自动故障转移功能的多个数据源 -智能数据缓存策略
+
+## 安装
+
+在 VS 代码扩展中搜索“Crypto Price Viewer”或访问[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=volcanic.crypto-price-viewer).
 
 ## 使用方法
 
-1. 打开命令面板 (Ctrl+Shift+P / Cmd+Shift+P)
-2. 输入以下命令之一：
-   - `Crypto: Show Top 200 Prices` - 显示价格列表
-   - `Crypto: Refresh Prices` - 手动刷新价格数据
+1.在 VS 代码侧栏中单击加密货币图标 2.使用搜索框查找特定令牌 3.点击刷新按钮更新数据 4.悬停查看详细信息 5.单击令牌以查看完整的市场数据
 
-## 数据来源
+## 数据源
 
-数据通过 CoinGecko API 获取，免费且无需 API key。
+-主要：CoinGecko 接口 -备份：Binance API -自动故障转移和重试机制
 
-## 注意事项
+## 隐私声明
 
-- 价格数据每 30 秒自动更新一次
-- 所有价格均以美元(USD)为单位显示
+此分机不收集任何个人信息。它只从公共 API 获取市场数据。
+
+## 贡献力量
+
+欢迎发布和拉取请求！
+
+## 许可证
+
+[MIT 许可证](LICENSE)
