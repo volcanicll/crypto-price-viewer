@@ -1,15 +1,36 @@
 {
   "name": "crypto-price-viewer",
   "displayName": "Crypto Price Viewer",
-  "description": "View real-time prices of top 100-500 cryptocurrencies",
+  "description": "Real-time cryptocurrency price viewer with market data, supply info, and lock-up details. Support multiple data sources and automatic failover.",
   "publisher": "volcanic",
   "repository": "https://github.com/volcanicll/crypto-price-viewer.git",
-  "version": "1.0.1",
+  "version": "2.0.0",
+  "license": "MIT",
+  "keywords": [
+    "cryptocurrency",
+    "crypto",
+    "bitcoin",
+    "ethereum",
+    "price",
+    "market",
+    "trading",
+    "finance",
+    "blockchain",
+    "token",
+    "binance",
+    "coingecko"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
+  "bugs": {
+    "url": "https://github.com/volcanicll/crypto-price-viewer/issues"
+  },
+  "homepage": "https://github.com/volcanicll/crypto-price-viewer#readme",
   "categories": [
-    "Other"
+    "Other",
+    "Data Science",
+    "Visualization"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -31,24 +52,92 @@
         {
           "id": "cryptoPriceView",
           "name": "Crypto Prices",
-          "type": "webview"
+          "type": "tree"
         }
       ]
     },
     "commands": [
       {
-        "command": "crypto-price-viewer.showPrices",
-        "title": "Crypto: Show Top 200 Prices"
-      },
-      {
         "command": "crypto-price-viewer.refresh",
-        "title": "Crypto: Refresh Prices"
+        "title": "Refresh",
+        "icon": "$(refresh)"
       },
       {
         "command": "crypto-price-viewer.search",
-        "title": "Crypto: Search Token"
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "crypto-price-viewer.sort.marketCap",
+        "title": "Sort by Market Cap",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "crypto-price-viewer.sort.priceChange",
+        "title": "Sort by Price Change",
+        "icon": "$(sort-precedence)"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "crypto-price-viewer.refresh",
+          "when": "view == cryptoPriceView",
+          "group": "navigation"
+        },
+        {
+          "command": "crypto-price-viewer.search",
+          "when": "view == cryptoPriceView",
+          "group": "navigation"
+        },
+        {
+          "command": "crypto-price-viewer.sort.marketCap",
+          "when": "view == cryptoPriceView",
+          "group": "sort@1"
+        },
+        {
+          "command": "crypto-price-viewer.sort.priceChange",
+          "when": "view == cryptoPriceView",
+          "group": "sort@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "crypto-price-viewer.showDetail",
+          "when": "view == cryptoPriceView",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Crypto Price Viewer",
+      "properties": {
+        "cryptoPriceViewer.refreshInterval": {
+          "type": "number",
+          "default": 30,
+          "description": "Data refresh interval in seconds (0 to disable auto-refresh)"
+        },
+        "cryptoPriceViewer.defaultLimit": {
+          "type": "number",
+          "default": 200,
+          "enum": [
+            100,
+            200,
+            500
+          ],
+          "description": "Default number of cryptocurrencies to display"
+        },
+        "cryptoPriceViewer.preferredDataSource": {
+          "type": "string",
+          "default": "CoinGecko",
+          "enum": [
+            "CoinGecko",
+            "Binance"
+          ],
+          "description": "Preferred data source"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

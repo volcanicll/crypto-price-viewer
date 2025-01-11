@@ -12,6 +12,8 @@ export const apiConfigs: CryptoApiConfig[] = [
       per_page: limit,
       page: 1,
       sparkline: false,
+      include_additional_fields: true,
+      include_supply_data: true,
     }),
   },
   {
