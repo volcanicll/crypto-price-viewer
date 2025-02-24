@@ -9,9 +9,16 @@ export class CryptoItem extends vscode.TreeItem {
     super(coin.name, collapsibleState);
 
     // 格式化市值
-    const formatMarketCap = (value: number) => {
-      if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-      if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+    const formatMarketCap = (value: number | null | undefined) => {
+      if (value == null) {
+        return "N/A";
+      }
+      if (value >= 1e9) {
+        return `$${(value / 1e9).toFixed(2)}B`;
+      }
+      if (value >= 1e6) {
+        return `$${(value / 1e6).toFixed(2)}M`;
+      }
       return `$${value.toLocaleString()}`;
     };
 
@@ -30,13 +37,19 @@ export class CryptoItem extends vscode.TreeItem {
     this.label = `${coin.name} (${coin.symbol.toUpperCase()})`;
 
     // 设置描述信息（价格和涨跌幅）
-    const priceChange = coin.price_change_percentage_24h.toFixed(2);
-    const changeSymbol = coin.price_change_percentage_24h >= 0 ? "↑" : "↓";
+    const priceChange =
+      coin.price_change_percentage_24h != null
+        ? coin.price_change_percentage_24h.toFixed(2)
+        : "0.00";
+    const changeSymbol =
+      (coin.price_change_percentage_24h ?? 0) >= 0 ? "↑" : "↓";
     const changeColor =
-      coin.price_change_percentage_24h >= 0 ? "$(arrow-up)" : "$(arrow-down)";
-    this.description = `$${coin.current_price.toLocaleString()} | ${changeSymbol} ${Math.abs(
-      priceChange
-    )}% `;
+      (coin.price_change_percentage_24h ?? 0) >= 0
+        ? "$(arrow-up)"
+        : "$(arrow-down)";
+    this.description = `$${
+      coin.current_price?.toLocaleString() ?? "N/A"
+    } | ${changeSymbol} ${Math.abs(parseFloat(priceChange))}% `;
 
     // 计算解锁信息
     const getUnlockInfo = (coin: any) => {
@@ -51,7 +64,9 @@ export class CryptoItem extends vscode.TreeItem {
       ).toFixed(2);
 
       let unlockInfo = `\n\n**锁仓信息**`;
-      unlockInfo += `\n- 锁仓数量: ${lockedSupply.toLocaleString()} ${coin.symbol.toUpperCase()}`;
+      unlockInfo += `\n- 锁仓数量: ${
+        lockedSupply?.toLocaleString() ?? "N/A"
+      } ${coin.symbol.toUpperCase()}`;
       unlockInfo += `\n- 锁仓比例: ${lockedPercentage}%`;
 
       // 如果有下次解锁信息
@@ -59,7 +74,9 @@ export class CryptoItem extends vscode.TreeItem {
         const unlockDate = new Date(coin.next_unlock_date);
         const formattedDate = unlockDate.toLocaleDateString("zh-CN");
         unlockInfo += `\n- 下次解锁时间: ${formattedDate}`;
-        unlockInfo += `\n- 下次解锁数量: ${coin.next_unlock_amount.toLocaleString()} ${coin.symbol.toUpperCase()}`;
+        unlockInfo += `\n- 下次解锁数量: ${
+          coin.next_unlock_amount?.toLocaleString() ?? "N/A"
+        } ${coin.symbol.toUpperCase()}`;
         unlockInfo += `\n- 解锁比例: ${(
           (coin.next_unlock_amount / coin.total_supply) *
           100
@@ -82,14 +99,14 @@ export class CryptoItem extends vscode.TreeItem {
     // 设置悬停提示，添加解锁信息
     this.tooltip = new vscode.MarkdownString(`
 ### ${coin.name} (${coin.symbol.toUpperCase()})
-- 市值排名: #${coin.market_cap_rank}
-- 当前价格: $${coin.current_price.toLocaleString()}
+- 市值排名: #${coin.market_cap_rank ?? "N/A"}
+- 当前价格: $${coin.current_price?.toLocaleString() ?? "N/A"}
 - 市值: ${formatMarketCap(coin.market_cap)}
 - 24h涨跌幅: ${priceChange}%
 - 24h交易量: ${formatMarketCap(coin.total_volume)}
 
 **供应信息**
-- 流通量: ${coin.circulating_supply.toLocaleString()}
+- 流通量: ${coin.circulating_supply?.toLocaleString() ?? "N/A"}
 - 总供应量: ${coin.total_supply ? coin.total_supply.toLocaleString() : "N/A"}
 - 供应量占比: ${supplyPercentage}%${getUnlockInfo(coin)}
     `);
@@ -156,16 +173,28 @@ export class CryptoTreeDataProvider
 # ${coin.name} (${coin.symbol.toUpperCase()})
 
 ## 价格信息
-- 当前价格: $${coin.current_price.toLocaleString()}
-- 24h涨跌幅: ${coin.price_change_percentage_24h.toFixed(2)}%
+- 当前价格: $${coin.current_price?.toLocaleString() ?? "N/A"}
+- 24h涨跌幅: ${
+      coin.price_change_percentage_24h != null
+        ? coin.price_change_percentage_24h.toFixed(2)
+        : "N/A"
+    }%
 
 ## 市场信息
-- 市值排名: #${coin.market_cap_rank}
-- 市值: $${(coin.market_cap / 1e9).toFixed(2)}B
-- 24h交易量: $${(coin.total_volume / 1e6).toFixed(2)}M
+- 市值排名: #${coin.market_cap_rank ?? "N/A"}
+- 市值: ${
+      coin.market_cap != null
+        ? `$${(coin.market_cap / 1e9).toFixed(2)}B`
+        : "N/A"
+    }
+- 24h交易量: ${
+      coin.total_volume != null
+        ? `$${(coin.total_volume / 1e6).toFixed(2)}M`
+        : "N/A"
+    }
 
 ## 供应信息
-- 流通量: ${coin.circulating_supply.toLocaleString()}
+- 流通量: ${coin.circulating_supply?.toLocaleString() ?? "N/A"}
 - 总供应量: ${coin.total_supply ? coin.total_supply.toLocaleString() : "N/A"}
 - 供应量占比: ${supplyPercentage}%
     `;

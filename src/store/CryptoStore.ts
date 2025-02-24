@@ -9,6 +9,9 @@ export class CryptoStore {
   private _currentApiIndex: number = 0;
   private _retryCount: number = 0;
   private readonly _maxRetries: number = 3;
+  private _sortField: "market_cap" | "price_change_percentage_24h" | null =
+    null;
+  private _sortDirection: "asc" | "desc" = "desc";
 
   private constructor() {}
 
@@ -63,10 +66,43 @@ export class CryptoStore {
   }
 
   getFilteredData() {
-    return this._cryptoData.filter(
+    let filteredData = this._cryptoData.filter(
       (coin) =>
         coin.name.toLowerCase().includes(this._searchTerm) ||
         coin.symbol.toLowerCase().includes(this._searchTerm)
     );
+
+    if (this._sortField) {
+      filteredData.sort((a, b) => {
+        const aValue = a[this._sortField!] ?? 0;
+        const bValue = b[this._sortField!] ?? 0;
+        return this._sortDirection === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      });
+    }
+
+    return filteredData;
+  }
+
+  // 排序方法
+  sortBy(field: "market_cap" | "price_change_percentage_24h") {
+    if (this._sortField === field) {
+      // 如果已经在按这个字段排序，切换排序方向
+      this._sortDirection = this._sortDirection === "asc" ? "desc" : "asc";
+    } else {
+      // 新的排序字段，默认降序
+      this._sortField = field;
+      this._sortDirection = "desc";
+    }
+  }
+
+  // Getters for sort state
+  get sortField() {
+    return this._sortField;
+  }
+
+  get sortDirection() {
+    return this._sortDirection;
   }
 }

@@ -54,6 +54,30 @@ export function activate(context: vscode.ExtensionContext) {
         );
         panel.webview.html = treeDataProvider.getDetailView(item);
       }
+    ),
+
+    // 按市值排序
+    vscode.commands.registerCommand(
+      "crypto-price-viewer.sort.marketCap",
+      () => {
+        store.sortBy("market_cap");
+        treeDataProvider.refresh();
+        vscode.window.showInformationMessage(
+          `按市值${store.sortDirection === "asc" ? "升序" : "降序"}排列`
+        );
+      }
+    ),
+
+    // 按24h涨跌幅排序
+    vscode.commands.registerCommand(
+      "crypto-price-viewer.sort.priceChange",
+      () => {
+        store.sortBy("price_change_percentage_24h");
+        treeDataProvider.refresh();
+        vscode.window.showInformationMessage(
+          `按24h涨跌幅${store.sortDirection === "asc" ? "升序" : "降序"}排列`
+        );
+      }
     )
   );
 
