@@ -15,6 +15,7 @@ A VS Code extension for real-time cryptocurrency price tracking and market data 
 - Display real-time prices of top 200 cryptocurrencies
 - 24h price changes and trading volume
 - Market cap ranking and detailed market data
+- Historical High (ATH) and Low (ATL) prices with dates and percentage changes in tooltips and detail view.
 
 📊 **Supply Information**
 
@@ -44,7 +45,7 @@ Search for "Crypto Price Viewer" in VS Code extensions or visit [VS Code Marketp
 2. Use the search box to find specific tokens
 3. Click refresh button to update data
 4. Hover to view detailed information
-5. Click on a token to view full market data
+5. Click on a token to view full market data with an enhanced and well-formatted layout.
 
 ## Data Sources
 
@@ -75,11 +76,11 @@ Issues and Pull Requests are welcome!
 🚀**实时市场数据**
 
 -显示排名前 200 位的加密货币的实时价格
--24 小时价格变化和成交量 -市值排名和详细的市场数据
+-24 小时价格变化和成交量 -市值排名和详细的市场数据 -在悬停提示和详情视图中显示历史最高价 (ATH) 和历史最低价 (ATL)，包括对应日期和百分比变化。
 
 📊**提供信息**
 
---流通和总供应量 -供应率可视化 -非全流通令牌的锁定信息
+-流通和总供应量 -供应率可视化 -非全流通令牌的锁定信息
 
 🔍**搜索与筛选**
 
@@ -95,7 +96,7 @@ Issues and Pull Requests are welcome!
 
 ## 使用方法
 
-1.在 VS 代码侧栏中单击加密货币图标 2.使用搜索框查找特定令牌 3.点击刷新按钮更新数据 4.悬停查看详细信息 5.单击令牌以查看完整的市场数据
+1.在 VS 代码侧栏中单击加密货币图标 2.使用搜索框查找特定令牌 3.点击刷新按钮更新数据 4.悬停查看详细信息 5.单击令牌以查看完整的市场数据，现在会以增强且格式良好的布局显示。
 
 ## 数据源
 
