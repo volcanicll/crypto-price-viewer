@@ -1,144 +1,148 @@
 import * as vscode from "vscode";
 import { CryptoStore } from "../store/CryptoStore";
+import { CoinMarket } from "../types/interfaces";
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatMarketCap(value: number | null | undefined): string {
+  if (value == null) return "N/A";
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  return `$${value.toLocaleString()}`;
+}
+
+function formatPrice(price: number | null | undefined): string {
+  if (price == null) return "N/A";
+  if (price >= 1) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (price >= 0.01) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(8)}`;
+}
+
+function formatSparkline(prices: number[]): string {
+  if (!prices || prices.length < 2) return "";
+  const step = Math.max(1, Math.floor(prices.length / 16));
+  const sampled = prices.filter((_, i) => i % step === 0);
+  const min = Math.min(...sampled);
+  const max = Math.max(...sampled);
+  const range = max - min || 1;
+  const chars = "▁▂▃▄▅▆▇█";
+  return sampled.map((v) => chars[Math.min(7, Math.floor(((v - min) / range) * 8))]).join("");
+}
 
 export class CryptoItem extends vscode.TreeItem {
+  public readonly coinId: string;
+
   constructor(
-    public readonly coin: any,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState
+    public readonly coin: CoinMarket,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+    private readonly isWatchlisted: boolean = false
   ) {
     super(coin.name, collapsibleState);
+    this.coinId = coin.id ?? coin.symbol;
 
-    // 格式化市值
-    const formatMarketCap = (value: number | null | undefined) => {
-      if (value == null) {
-        return "N/A";
-      }
-      if (value >= 1e9) {
-        return `$${(value / 1e9).toFixed(2)}B`;
-      }
-      if (value >= 1e6) {
-        return `$${(value / 1e6).toFixed(2)}M`;
-      }
-      return `$${value.toLocaleString()}`;
-    };
-
-    // 计算供应量占比
-    const supplyPercentage = coin.total_supply
-      ? ((coin.circulating_supply / coin.total_supply) * 100).toFixed(2)
-      : "N/A";
-
-    // 设置图标
     this.iconPath = {
       light: vscode.Uri.parse(coin.image),
       dark: vscode.Uri.parse(coin.image),
     };
 
-    // 设置主要显示内容
-    this.label = `${coin.name} (${coin.symbol.toUpperCase()})`;
+    const symbol = escapeHtml(coin.symbol.toUpperCase());
+    const name = escapeHtml(coin.name);
+    const price = formatPrice(coin.current_price);
 
-    // 设置描述信息（价格和涨跌幅）
     const priceChange =
       coin.price_change_percentage_24h != null
         ? coin.price_change_percentage_24h.toFixed(2)
-        : "0.00";
-    const changeSymbol =
-      (coin.price_change_percentage_24h ?? 0) >= 0 ? "↑" : "↓";
-    const changeColor =
-      (coin.price_change_percentage_24h ?? 0) >= 0
-        ? "$(arrow-up)"
-        : "$(arrow-down)";
-    this.description = `$${
-      coin.current_price?.toLocaleString() ?? "N/A"
-    } | ${changeSymbol} ${Math.abs(parseFloat(priceChange))}% `;
+        : null;
+    const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
+    const arrow = isUp ? "↑" : "↓";
+    const changeText = priceChange != null ? ` ${arrow} ${Math.abs(parseFloat(priceChange))}%` : "";
 
-    // 计算解锁信息
-    const getUnlockInfo = (coin: any) => {
-      if (!coin.total_supply || coin.circulating_supply >= coin.total_supply) {
-        return "";
-      }
+    const starPrefix = isWatchlisted ? "⭐ " : "";
+    this.label = `${starPrefix}${name} (${symbol})`;
+    this.description = `${price}${changeText}`;
 
-      const lockedSupply = coin.total_supply - coin.circulating_supply;
-      const lockedPercentage = (
-        (lockedSupply / coin.total_supply) *
-        100
-      ).toFixed(2);
+    this.tooltip = this.buildTooltip(coin);
 
-      let unlockInfo = `\n\n**锁仓信息**`;
-      unlockInfo += `\n- 锁仓数量: ${
-        lockedSupply?.toLocaleString() ?? "N/A"
-      } ${coin.symbol.toUpperCase()}`;
-      unlockInfo += `\n- 锁仓比例: ${lockedPercentage}%`;
+    this.contextValue = isWatchlisted ? "cryptoItemWatched" : "cryptoItem";
 
-      // 如果有下次解锁信息
-      if (coin.next_unlock_date && coin.next_unlock_amount) {
-        const unlockDate = new Date(coin.next_unlock_date);
-        const formattedDate = unlockDate.toLocaleDateString("zh-CN");
-        unlockInfo += `\n- 下次解锁时间: ${formattedDate}`;
-        unlockInfo += `\n- 下次解锁数量: ${
-          coin.next_unlock_amount?.toLocaleString() ?? "N/A"
-        } ${coin.symbol.toUpperCase()}`;
-        unlockInfo += `\n- 解锁比例: ${(
-          (coin.next_unlock_amount / coin.total_supply) *
-          100
-        ).toFixed(2)}%`;
-      }
-
-      // 如果有线性解锁信息
-      if (coin.linear_unlock_info) {
-        unlockInfo += `\n- 线性解锁: ${coin.linear_unlock_info}`;
-      }
-
-      // 如果有锁仓合约地址
-      if (coin.lock_contract_address) {
-        unlockInfo += `\n- 锁仓合约: [查看合约](${coin.lock_contract_address})`;
-      }
-
-      return unlockInfo;
-    };
-
-    // 设置悬停提示，添加解锁信息
-    this.tooltip = new vscode.MarkdownString(`
-### ${coin.name} (${coin.symbol.toUpperCase()})
-- 市值排名: #${coin.market_cap_rank ?? "N/A"}
-- 当前价格: $${coin.current_price?.toLocaleString() ?? "N/A"}
-- 历史最高价 (ATH): $${coin.ath?.toLocaleString() ?? "N/A"}
-- 历史最低价 (ATL): $${coin.atl?.toLocaleString() ?? "N/A"}
-- 市值: ${formatMarketCap(coin.market_cap)}
-- 24h涨跌幅: ${priceChange}%
-- 24h交易量: ${formatMarketCap(coin.total_volume)}
-
-**供应信息**
-- 流通量: ${coin.circulating_supply?.toLocaleString() ?? "N/A"}
-- 总供应量: ${coin.total_supply ? coin.total_supply.toLocaleString() : "N/A"}
-- 供应量占比: ${supplyPercentage}%${getUnlockInfo(coin)}
-    `);
-
-    // 启用 Markdown 字符串中的链接
-    this.tooltip.isTrusted = true;
-    this.tooltip.supportHtml = true;
-
-    // 设置上下文值，用于命令调用
-    this.contextValue = "cryptoItem";
-
-    // 设置命令（点击时触发）
     this.command = {
       command: "crypto-price-viewer.showDetail",
       title: "Show Details",
       arguments: [this],
     };
   }
+
+  private buildTooltip(coin: CoinMarket): vscode.MarkdownString {
+    const md = new vscode.MarkdownString();
+    md.isTrusted = true;
+    md.supportHtml = true;
+
+    const supplyPercentage = coin.total_supply
+      ? ((coin.circulating_supply! / coin.total_supply) * 100).toFixed(2)
+      : "N/A";
+
+    md.appendMarkdown(`### ${escapeHtml(coin.name)} (${escapeHtml(coin.symbol.toUpperCase())})\n\n`);
+    md.appendMarkdown(`**Price:** ${formatPrice(coin.current_price)}\n\n`);
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`| | |\n|---|---|\n`);
+    md.appendMarkdown(`| Rank | #${coin.market_cap_rank ?? "N/A"} |\n`);
+    md.appendMarkdown(`| Market Cap | ${formatMarketCap(coin.market_cap)} |\n`);
+    md.appendMarkdown(`| 24h Change | ${coin.price_change_percentage_24h != null ? coin.price_change_percentage_24h.toFixed(2) + "%" : "N/A"} |\n`);
+    md.appendMarkdown(`| 24h Volume | ${formatMarketCap(coin.total_volume)} |\n`);
+    md.appendMarkdown(`| 24h High/Low | ${formatPrice(coin.high_24h)} / ${formatPrice(coin.low_24h)} |\n`);
+    md.appendMarkdown(`| ATH | ${formatPrice(coin.ath)} (${coin.ath_change_percentage?.toFixed(1) ?? "N/A"}%)\n`);
+    md.appendMarkdown(`| ATL | ${formatPrice(coin.atl)} (${coin.atl_change_percentage?.toFixed(1) ?? "N/A"}%)\n`);
+    md.appendMarkdown(`| Supply | ${supplyPercentage}%\n`);
+
+    if (coin.sparkline_in_7d?.price) {
+      md.appendMarkdown(`\n**7d Trend:** ${formatSparkline(coin.sparkline_in_7d.price)}\n\n`);
+    }
+
+    if (coin.total_supply && coin.circulating_supply != null && coin.circulating_supply < coin.total_supply) {
+      const locked = coin.total_supply - coin.circulating_supply;
+      const lockedPct = ((locked / coin.total_supply) * 100).toFixed(2);
+      md.appendMarkdown(`\n---\n\n**Lock-up Info**\n`);
+      md.appendMarkdown(`\n- Locked: ${locked?.toLocaleString() ?? "N/A"} ${escapeHtml(coin.symbol.toUpperCase())} (${lockedPct}%)`);
+      if (coin.next_unlock_date && coin.next_unlock_amount) {
+        md.appendMarkdown(`\n- Next Unlock: ${new Date(coin.next_unlock_date).toLocaleDateString()} — ${coin.next_unlock_amount.toLocaleString()} ${escapeHtml(coin.symbol.toUpperCase())}`);
+      }
+      if (coin.linear_unlock_info) {
+        md.appendMarkdown(`\n- Linear: ${escapeHtml(coin.linear_unlock_info)}`);
+      }
+    }
+
+    return md;
+  }
+}
+
+export class StatusItem extends vscode.TreeItem {
+  constructor(message: string, icon: string) {
+    super(message, vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon(icon);
+    this.contextValue = "statusItem";
+  }
 }
 
 export class CryptoTreeDataProvider
-  implements vscode.TreeDataProvider<CryptoItem>
+  implements vscode.TreeDataProvider<CryptoItem | StatusItem>
 {
   private _onDidChangeTreeData: vscode.EventEmitter<
-    CryptoItem | undefined | null | void
-  > = new vscode.EventEmitter<CryptoItem | undefined | null | void>();
+    CryptoItem | StatusItem | undefined | null | void
+  > = new vscode.EventEmitter<CryptoItem | StatusItem | undefined | null | void>();
   readonly onDidChangeTreeData: vscode.Event<
-    CryptoItem | undefined | null | void
+    CryptoItem | StatusItem | undefined | null | void
   > = this._onDidChangeTreeData.event;
   private store: CryptoStore;
+  public isLoading: boolean = false;
+  public errorMessage: string | null = null;
 
   constructor() {
     this.store = CryptoStore.getInstance();
@@ -148,218 +152,173 @@ export class CryptoTreeDataProvider
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: CryptoItem): vscode.TreeItem {
+  getTreeItem(element: CryptoItem | StatusItem): vscode.TreeItem {
     return element;
   }
 
-  async getChildren(element?: CryptoItem): Promise<CryptoItem[]> {
+  async getChildren(element?: CryptoItem | StatusItem): Promise<Array<CryptoItem | StatusItem>> {
     if (element) {
-      // 如果需要显示子项，在这里处理
       return [];
     }
 
+    if (this.isLoading) {
+      return [new StatusItem("Loading data...", "loading~spin")];
+    }
+
+    if (this.errorMessage) {
+      const errItem = new StatusItem(`⚠ ${this.errorMessage}`, "error");
+      errItem.command = {
+        command: "crypto-price-viewer.refresh",
+        title: "Retry",
+      };
+      errItem.tooltip = new vscode.MarkdownString("Click to retry");
+      return [errItem];
+    }
+
     const data = this.store.getFilteredData();
+    if (data.length === 0 && this.store.searchTerm) {
+      return [new StatusItem(
+        `No results for "${this.store.searchTerm}"`,
+        "search"
+      )];
+    }
+
     return data.map(
-      (coin) => new CryptoItem(coin, vscode.TreeItemCollapsibleState.None)
+      (coin) =>
+        new CryptoItem(
+          coin,
+          vscode.TreeItemCollapsibleState.None,
+          this.store.isInWatchlist(coin.id ?? coin.symbol)
+        )
     );
   }
 
-  // 添加详细信息视图
   getDetailView(item: CryptoItem): string {
     const coin = item.coin;
+    const safeName = escapeHtml(coin.name);
+    const safeSymbol = escapeHtml(coin.symbol.toUpperCase());
+    const safeImage = encodeURI(coin.image);
+
     const supplyPercentage = coin.total_supply
-      ? ((coin.circulating_supply / coin.total_supply) * 100).toFixed(2)
+      ? ((coin.circulating_supply! / coin.total_supply) * 100).toFixed(2)
       : "N/A";
 
-    const formatPrice = (price: number | null | undefined): string => {
-      return price?.toLocaleString() ?? "N/A";
-    };
+    const fmt = formatPrice;
+    const fmc = formatMarketCap;
 
-    const formatMarketCapDetail = (
-      value: number | null | undefined
-    ): string => {
-      if (value == null) {
-        return "N/A";
-      }
-      if (value >= 1e9) {
-        return `$${(value / 1e9).toFixed(2)}B`;
-      }
-      if (value >= 1e6) {
-        return `$${(value / 1e6).toFixed(2)}M`;
-      }
-      return `$${value.toLocaleString()}`;
-    };
+    const priceChangeClass = (val: number | null | undefined): string =>
+      val != null && val < 0 ? "negative" : "positive";
 
-    return `
-<!DOCTYPE html>
+    const fmtDate = (d: string | null | undefined): string =>
+      d ? new Date(d).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" }) : "N/A";
+
+    const sparklineBlock = coin.sparkline_in_7d?.price
+      ? `<h2>7 Day Trend</h2>
+         <div class="sparkline">${escapeHtml(formatSparkline(coin.sparkline_in_7d.price))}</div>`
+      : "";
+
+    return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${coin.name} 详细信息</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: var(--vscode-editor-background);
-            color: var(--vscode-editor-foreground);
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: var(--vscode-sideBar-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 8px;
-        }
-        h1 {
-            display: flex;
-            align-items: center;
-            font-size: 24px;
-            color: var(--vscode-textLink-foreground);
-            border-bottom: 1px solid var(--vscode-editorWidget-border);
-            padding-bottom: 15px;
-            margin-top: 0;
-        }
-        h1 img {
-            width: 32px;
-            height: 32px;
-            margin-right: 12px;
-            border-radius: 50%;
-        }
-        h2 {
-            font-size: 20px;
-            color: var(--vscode-textLink-activeForeground);
-            margin-top: 25px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid var(--vscode-editorGroup-border);
-            padding-bottom: 8px;
-        }
-        ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        li {
-            margin-bottom: 10px;
-            padding: 8px;
-            background-color: var(--vscode-editorWidget-background);
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        li strong {
-            font-weight: 600;
-            color: var(--vscode-descriptionForeground);
-            margin-right: 10px;
-        }
-        .value {
-            color: var(--vscode-editor-foreground);
-            text-align: right;
-        }
-        .positive {
-            color: var(--vscode-terminal-ansiGreen);
-        }
-        .negative {
-            color: var(--vscode-terminal-ansiRed);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeName} Details</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0; padding: 20px;
+      background-color: var(--vscode-editor-background);
+      color: var(--vscode-editor-foreground);
+    }
+    .container {
+      max-width: 800px; margin: 0 auto; padding: 20px;
+      background-color: var(--vscode-sideBar-background);
+      border: 1px solid var(--vscode-widget-border);
+      border-radius: 8px;
+    }
+    h1 {
+      display: flex; align-items: center; font-size: 24px;
+      color: var(--vscode-textLink-foreground);
+      border-bottom: 1px solid var(--vscode-editorWidget-border);
+      padding-bottom: 15px; margin-top: 0;
+    }
+    h1 img { width: 32px; height: 32px; margin-right: 12px; border-radius: 50%; }
+    h2 {
+      font-size: 18px; color: var(--vscode-textLink-activeForeground);
+      margin-top: 20px; margin-bottom: 8px;
+      border-bottom: 1px solid var(--vscode-editorGroup-border);
+      padding-bottom: 6px;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 8px;
+    }
+    .item {
+      padding: 8px 12px;
+      background-color: var(--vscode-editorWidget-background);
+      border-radius: 4px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .item .label { color: var(--vscode-descriptionForeground); font-size: 13px; }
+    .item .value { font-weight: 500; text-align: right; }
+    .positive { color: var(--vscode-terminal-ansiGreen, #4caf50); }
+    .negative { color: var(--vscode-terminal-ansiRed, #f44336); }
+    .sparkline {
+      font-family: monospace; font-size: 20px; letter-spacing: 1px;
+      padding: 12px; background: var(--vscode-editorWidget-background);
+      border-radius: 4px; text-align: center;
+    }
+    .links { margin-top: 16px; text-align: center; }
+    .links a {
+      color: var(--vscode-textLink-foreground);
+      text-decoration: none; padding: 6px 14px;
+      border: 1px solid var(--vscode-button-border, transparent);
+      border-radius: 4px; margin: 0 4px;
+    }
+    .links a:hover { text-decoration: underline; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1><img src="${coin.image}" alt="${coin.name} logo"> ${
-      coin.name
-    } (${coin.symbol.toUpperCase()})</h1>
+  <div class="container">
+    <h1><img src="${safeImage}" alt="${safeName}"> ${safeName} (${safeSymbol})</h1>
 
-        <h2>价格信息</h2>
-        <ul>
-            <li><strong>当前价格:</strong> <span class="value">$${formatPrice(
-              coin.current_price
-            )}</span></li>
-            <li><strong>历史最高价 (ATH):</strong> <span class="value">$${formatPrice(
-              coin.ath
-            )}</span></li>
-            <li><strong>ATH 日期:</strong> <span class="value">${
-              coin.ath_date
-                ? new Date(coin.ath_date).toLocaleDateString("zh-CN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "N/A"
-            }</span></li>
-            <li><strong>距离 ATH:</strong> <span class="value ${
-              coin.ath_change_percentage != null &&
-              coin.ath_change_percentage < 0
-                ? "negative"
-                : "positive"
-            }">${coin.ath_change_percentage?.toFixed(2) ?? "N/A"}%</span></li>
-            <li><strong>历史最低价 (ATL):</strong> <span class="value">$${formatPrice(
-              coin.atl
-            )}</span></li>
-            <li><strong>ATL 日期:</strong> <span class="value">${
-              coin.atl_date
-                ? new Date(coin.atl_date).toLocaleDateString("zh-CN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "N/A"
-            }</span></li>
-            <li><strong>距离 ATL:</strong> <span class="value ${
-              coin.atl_change_percentage != null &&
-              coin.atl_change_percentage < 0
-                ? "negative"
-                : "positive"
-            }">${coin.atl_change_percentage?.toFixed(2) ?? "N/A"}%</span></li>
-            <li><strong>24h 涨跌幅:</strong> <span class="value ${
-              coin.price_change_percentage_24h != null &&
-              coin.price_change_percentage_24h < 0
-                ? "negative"
-                : "positive"
-            }">${
-      coin.price_change_percentage_24h != null
-        ? coin.price_change_percentage_24h.toFixed(2)
-        : "N/A"
-    }%</span></li>
-        </ul>
-
-        <h2>市场信息</h2>
-        <ul>
-            <li><strong>市值排名:</strong> <span class="value">#${
-              coin.market_cap_rank ?? "N/A"
-            }</span></li>
-            <li><strong>市值:</strong> <span class="value">${formatMarketCapDetail(
-              coin.market_cap
-            )}</span></li>
-            <li><strong>24h 高点:</strong> <span class="value">$${formatPrice(
-              coin.high_24h
-            )}</span></li>
-            <li><strong>24h 低点:</strong> <span class="value">$${formatPrice(
-              coin.low_24h
-            )}</span></li>
-            <li><strong>24h 交易量:</strong> <span class="value">${formatMarketCapDetail(
-              coin.total_volume
-            )}</span></li>
-        </ul>
-
-        <h2>供应信息</h2>
-        <ul>
-            <li><strong>流通量:</strong> <span class="value">${
-              coin.circulating_supply?.toLocaleString() ?? "N/A"
-            } ${coin.symbol.toUpperCase()}</span></li>
-            <li><strong>总供应量:</strong> <span class="value">${
-              coin.total_supply ? coin.total_supply.toLocaleString() : "N/A"
-            } ${coin.symbol.toUpperCase()}</span></li>
-            <li><strong>最大供应量:</strong> <span class="value">${
-              coin.max_supply ? coin.max_supply.toLocaleString() : "N/A"
-            } ${coin.symbol.toUpperCase()}</span></li>
-            <li><strong>供应量占比:</strong> <span class="value">${supplyPercentage}%</span></li>
-        </ul>
+    <h2>Price Info</h2>
+    <div class="grid">
+      <div class="item"><span class="label">Current</span><span class="value">${fmt(coin.current_price)}</span></div>
+      <div class="item"><span class="label">24h Change</span><span class="value ${priceChangeClass(coin.price_change_percentage_24h)}">${coin.price_change_percentage_24h?.toFixed(2) ?? "N/A"}%</span></div>
+      <div class="item"><span class="label">24h High</span><span class="value">${fmt(coin.high_24h)}</span></div>
+      <div class="item"><span class="label">24h Low</span><span class="value">${fmt(coin.low_24h)}</span></div>
+      <div class="item"><span class="label">ATH</span><span class="value">${fmt(coin.ath)}</span></div>
+      <div class="item"><span class="label">ATH Date</span><span class="value">${fmtDate(coin.ath_date)}</span></div>
+      <div class="item"><span class="label">From ATH</span><span class="value ${priceChangeClass(coin.ath_change_percentage)}">${coin.ath_change_percentage?.toFixed(1) ?? "N/A"}%</span></div>
+      <div class="item"><span class="label">ATL</span><span class="value">${fmt(coin.atl)}</span></div>
+      <div class="item"><span class="label">ATL Date</span><span class="value">${fmtDate(coin.atl_date)}</span></div>
+      <div class="item"><span class="label">From ATL</span><span class="value ${priceChangeClass(coin.atl_change_percentage)}">${coin.atl_change_percentage?.toFixed(1) ?? "N/A"}%</span></div>
     </div>
+
+    <h2>Market Info</h2>
+    <div class="grid">
+      <div class="item"><span class="label">Rank</span><span class="value">#${coin.market_cap_rank ?? "N/A"}</span></div>
+      <div class="item"><span class="label">Market Cap</span><span class="value">${fmc(coin.market_cap)}</span></div>
+      <div class="item"><span class="label">24h Volume</span><span class="value">${fmc(coin.total_volume)}</span></div>
+    </div>
+
+    <h2>Supply Info</h2>
+    <div class="grid">
+      <div class="item"><span class="label">Circulating</span><span class="value">${coin.circulating_supply?.toLocaleString() ?? "N/A"}</span></div>
+      <div class="item"><span class="label">Total Supply</span><span class="value">${coin.total_supply?.toLocaleString() ?? "N/A"}</span></div>
+      <div class="item"><span class="label">Max Supply</span><span class="value">${coin.max_supply?.toLocaleString() ?? "N/A"}</span></div>
+      <div class="item"><span class="label">Circulation</span><span class="value">${supplyPercentage}%</span></div>
+    </div>
+
+    ${sparklineBlock}
+
+    <div class="links">
+      <a href="https://www.coingecko.com/en/coins/${escapeHtml(coin.id ?? '')}">View on CoinGecko</a>
+      <a href="https://www.binance.com/en/trade/${safeSymbol}_USDT">View on Binance</a>
+    </div>
+  </div>
 </body>
-</html>
-    `;
+</html>`;
   }
 }

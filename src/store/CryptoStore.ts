@@ -1,17 +1,17 @@
 import * as vscode from "vscode";
-import { CryptoApiConfig } from "../types/interfaces";
+import { CoinMarket, SortField, SortDirection, Currency } from "../types/interfaces";
 
 export class CryptoStore {
   private static instance: CryptoStore;
-  private _cryptoData: any[] = [];
+  private _cryptoData: CoinMarket[] = [];
   private _searchTerm: string = "";
-  private _limit: number = 200;
-  private _currentApiIndex: number = 0;
   private _retryCount: number = 0;
   private readonly _maxRetries: number = 3;
-  private _sortField: "market_cap" | "price_change_percentage_24h" | null =
-    null;
-  private _sortDirection: "asc" | "desc" = "desc";
+  private _sortField: SortField | null = null;
+  private _sortDirection: SortDirection = "desc";
+  private _watchlist: Set<string> = new Set();
+  private _dataSource: string = "";
+  private _lastUpdated: Date | null = null;
 
   private constructor() {}
 
@@ -22,87 +22,163 @@ export class CryptoStore {
     return CryptoStore.instance;
   }
 
-  // Getters
-  get cryptoData() {
+  get cryptoData(): CoinMarket[] {
     return this._cryptoData;
   }
-  get searchTerm() {
-    return this._searchTerm;
-  }
-  get limit() {
-    return this._limit;
-  }
-  get currentApiIndex() {
-    return this._currentApiIndex;
-  }
-  get retryCount() {
-    return this._retryCount;
-  }
-  get maxRetries() {
-    return this._maxRetries;
+
+  set cryptoData(data: CoinMarket[]) {
+    this._cryptoData = data;
+    this._lastUpdated = new Date();
   }
 
-  // Setters
-  set cryptoData(data: any[]) {
-    this._cryptoData = data;
+  get searchTerm(): string {
+    return this._searchTerm;
   }
 
   set searchTerm(term: string) {
     this._searchTerm = term.toLowerCase();
   }
 
-  set limit(value: number) {
-    this._limit = value;
+  get retryCount(): number {
+    return this._retryCount;
+  }
+
+  get maxRetries(): number {
+    return this._maxRetries;
+  }
+
+  get sortField(): SortField | null {
+    return this._sortField;
+  }
+
+  get sortDirection(): SortDirection {
+    return this._sortDirection;
+  }
+
+  get watchlist(): Set<string> {
+    return this._watchlist;
+  }
+
+  get dataSource(): string {
+    return this._dataSource;
+  }
+
+  set dataSource(name: string) {
+    this._dataSource = name;
+  }
+
+  get lastUpdated(): Date | null {
+    return this._lastUpdated;
+  }
+
+  get refreshInterval(): number {
+    const config = vscode.workspace.getConfiguration("cryptoPriceViewer");
+    return config.get<number>("refreshInterval", 30);
+  }
+
+  get defaultLimit(): number {
+    const config = vscode.workspace.getConfiguration("cryptoPriceViewer");
+    return config.get<number>("defaultLimit", 200);
+  }
+
+  get preferredDataSource(): string {
+    const config = vscode.workspace.getConfiguration("cryptoPriceViewer");
+    return config.get<string>("preferredDataSource", "CoinGecko");
+  }
+
+  get currency(): Currency {
+    const config = vscode.workspace.getConfiguration("cryptoPriceViewer");
+    return config.get<Currency>("currency", "usd");
+  }
+
+  get showSparkline(): boolean {
+    const config = vscode.workspace.getConfiguration("cryptoPriceViewer");
+    return config.get<boolean>("showSparkline", false);
   }
 
   resetRetryCount() {
     this._retryCount = 0;
-    this._currentApiIndex = 0;
   }
 
-  incrementRetryCount() {
+  incrementRetryCount(totalApis: number) {
     this._retryCount++;
-    this._currentApiIndex = (this._currentApiIndex + 1) % 2;
   }
 
-  getFilteredData() {
-    let filteredData = this._cryptoData.filter(
-      (coin) =>
-        coin.name.toLowerCase().includes(this._searchTerm) ||
-        coin.symbol.toLowerCase().includes(this._searchTerm)
-    );
+  get currentApiIndex(): number {
+    const preferred = this.preferredDataSource;
+    const offset = preferred === "Binance" ? 1 : 0;
+    return (offset + this._retryCount) % 2;
+  }
 
-    if (this._sortField) {
-      filteredData.sort((a, b) => {
-        const aValue = a[this._sortField!] ?? 0;
-        const bValue = b[this._sortField!] ?? 0;
-        return this._sortDirection === "asc"
-          ? aValue - bValue
-          : bValue - aValue;
-      });
+  getFilteredData(): CoinMarket[] {
+    const watchlisted: CoinMarket[] = [];
+    const others: CoinMarket[] = [];
+
+    for (const coin of this._cryptoData) {
+      const matchesSearch =
+        !this._searchTerm ||
+        coin.name.toLowerCase().includes(this._searchTerm) ||
+        coin.symbol.toLowerCase().includes(this._searchTerm);
+
+      if (!matchesSearch) continue;
+
+      if (this._watchlist.has(coin.id ?? coin.symbol)) {
+        watchlisted.push(coin);
+      } else {
+        others.push(coin);
+      }
     }
 
-    return filteredData;
+    const applySort = (data: CoinMarket[]): CoinMarket[] => {
+      if (!this._sortField) return data;
+      return [...data].sort((a, b) => {
+        const aValue = a[this._sortField!] ?? 0;
+        const bValue = b[this._sortField!] ?? 0;
+        return this._sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      });
+    };
+
+    return [...applySort(watchlisted), ...applySort(others)];
   }
 
-  // 排序方法
-  sortBy(field: "market_cap" | "price_change_percentage_24h") {
+  sortBy(field: SortField) {
     if (this._sortField === field) {
-      // 如果已经在按这个字段排序，切换排序方向
       this._sortDirection = this._sortDirection === "asc" ? "desc" : "asc";
     } else {
-      // 新的排序字段，默认降序
       this._sortField = field;
       this._sortDirection = "desc";
     }
   }
 
-  // Getters for sort state
-  get sortField() {
-    return this._sortField;
+  toggleWatchlist(coinId: string) {
+    if (this._watchlist.has(coinId)) {
+      this._watchlist.delete(coinId);
+    } else {
+      this._watchlist.add(coinId);
+    }
   }
 
-  get sortDirection() {
-    return this._sortDirection;
+  isInWatchlist(coinId: string): boolean {
+    return this._watchlist.has(coinId);
+  }
+
+  loadWatchlist(ids: string[]) {
+    this._watchlist = new Set(ids);
+  }
+
+  getWatchlistIds(): string[] {
+    return Array.from(this._watchlist);
+  }
+
+  clearSearch() {
+    this._searchTerm = "";
+  }
+
+  get totalFiltered(): number {
+    return this.getFilteredData().length;
+  }
+
+  get totalCoins(): number {
+    return this._cryptoData.length;
   }
 }

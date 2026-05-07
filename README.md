@@ -1,115 +1,72 @@
 # Crypto Price Viewer for VS Code
 
-[English](#english) | [中文](#中文)
-
----
-
-# English
-
-A VS Code extension for real-time cryptocurrency price tracking and market data visualization.
+Real-time cryptocurrency price tracking, market data visualization, price alerts, and watchlist management.
 
 ## Features
 
-🚀 **Real-time Market Data**
+**Real-time Market Data**
+- Display prices of top 100/200/500 cryptocurrencies with auto-refresh
+- 24h price changes, trading volume, market cap ranking
+- All-time High (ATH) and All-time Low (ATL) with dates and percentages
+- 7-day sparkline trend in tooltip (optional)
+- Multiple currencies: USD, EUR, CNY, JPY, KRW, GBP
 
-- Display real-time prices of top 200 cryptocurrencies
-- 24h price changes and trading volume
-- Market cap ranking and detailed market data
-- Historical High (ATH) and Low (ATL) prices with dates and percentage changes in tooltips and detail view.
+**Watchlist**
+- Star coins to pin them to the top of the list
+- Persisted across sessions
+- Quick add/remove via right-click context menu
 
-📊 **Supply Information**
+**Price Alerts**
+- Set target price for any coin
+- Get notified when price crosses the threshold
+- Manage alerts via command palette
 
-- Circulating and total supply
-- Supply ratio visualization
-- Lock-up information for non-fully circulating tokens
+**Search & Sort**
+- Search by name or symbol with match count
+- Sort by market cap or 24h price change (toggle ascending/descending)
+- Visual sort direction indicator in tree title
 
-🔍 **Search & Filter**
+**Data Sources**
+- Primary: CoinGecko API
+- Fallback: Binance API
+- Automatic failover with retry
+- Preferred source configurable in settings
 
-- Search by name and symbol
-- Sort by market cap and price change
-- Flexible data filtering options
+**Status Bar**
+- Shows last update time and active data source
+- Click to refresh
 
-⚡ **Performance**
+## Configuration
 
-- Data persistence across view switches
-- Multiple data sources with automatic failover
-- Smart data caching strategy
+| Setting | Default | Description |
+|---|---|---|
+| `cryptoPriceViewer.refreshInterval` | `30` | Auto-refresh interval in seconds (0 to disable) |
+| `cryptoPriceViewer.defaultLimit` | `200` | Number of coins to display (100 / 200 / 500) |
+| `cryptoPriceViewer.preferredDataSource` | `CoinGecko` | Preferred API source |
+| `cryptoPriceViewer.currency` | `usd` | Display currency (usd, eur, cny, jpy, krw, gbp) |
+| `cryptoPriceViewer.showSparkline` | `false` | Show 7-day sparkline trend in tooltip |
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `Refresh Prices` | Fetch latest data |
+| `Search Coin` | Filter by name or symbol |
+| `Clear Search` | Reset search filter |
+| `Sort by Market Cap` | Toggle market cap sort |
+| `Sort by 24h Change` | Toggle 24h change sort |
+| `Add/Remove from Watchlist` | Toggle watchlist star |
+| `Set Price Alert` | Set a price threshold alert |
+| `Manage Price Alerts` | View and remove alerts |
 
 ## Installation
 
-Search for "Crypto Price Viewer" in VS Code extensions or visit [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=volcanic.crypto-price-viewer).
+Search for **Crypto Price Viewer** in VS Code extensions or visit the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=volcanic.crypto-price-viewer).
 
-## Usage
+## Privacy
 
-1. Click the cryptocurrency icon in VS Code sidebar
-2. Use the search box to find specific tokens
-3. Click refresh button to update data
-4. Hover to view detailed information
-5. Click on a token to view full market data with an enhanced and well-formatted layout.
-
-## Data Sources
-
-- Primary: CoinGecko API
-- Backup: Binance API
-- Automatic failover and retry mechanism
-
-## Privacy Notice
-
-This extension does not collect any personal information. It only fetches market data from public APIs.
-
-## Contributing
-
-Issues and Pull Requests are welcome!
+This extension does not collect any personal information. It only fetches public market data from CoinGecko and Binance APIs.
 
 ## License
 
 [MIT License](LICENSE)
-
----
-
-# 中文
-
-用于实时加密货币价格跟踪和市场数据可视化的 VS 代码扩展。
-
-## 功能
-
-🚀**实时市场数据**
-
--显示排名前 200 位的加密货币的实时价格
--24 小时价格变化和成交量 -市值排名和详细的市场数据 -在悬停提示和详情视图中显示历史最高价 (ATH) 和历史最低价 (ATL)，包括对应日期和百分比变化。
-
-📊**提供信息**
-
--流通和总供应量 -供应率可视化 -非全流通令牌的锁定信息
-
-🔍**搜索与筛选**
-
--按名称和符号搜索 -按市值和价格变化排序 -灵活的数据过滤选项
-
-⚡**性能**
-
--跨视图交换机的数据持久化 -具有自动故障转移功能的多个数据源 -智能数据缓存策略
-
-## 安装
-
-在 VS 代码扩展中搜索“Crypto Price Viewer”或访问[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=volcanic.crypto-price-viewer).
-
-## 使用方法
-
-1.在 VS 代码侧栏中单击加密货币图标 2.使用搜索框查找特定令牌 3.点击刷新按钮更新数据 4.悬停查看详细信息 5.单击令牌以查看完整的市场数据，现在会以增强且格式良好的布局显示。
-
-## 数据源
-
--主要：CoinGecko 接口 -备份：Binance API -自动故障转移和重试机制
-
-## 隐私声明
-
-此分机不收集任何个人信息。它只从公共 API 获取市场数据。
-
-## 贡献力量
-
-欢迎发布和拉取请求！
-
-## 许可证
-
-[MIT 许可证](LICENSE)

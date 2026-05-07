@@ -1,67 +1,107 @@
-# 更新日志
+# Changelog
+
+## [3.0.0] - 2025-05-07
+
+### Major Update
+
+A comprehensive upgrade covering type safety, security, UX, and new features.
+
+### New Features
+
+- **Watchlist** — Star coins via right-click to pin them to top of list, persisted across sessions
+- **Price Alerts** — Set target price for any coin, get notified on threshold crossing, manage via command palette
+- **Multi-currency** — New `currency` config supporting USD / EUR / CNY / JPY / KRW / GBP
+- **Sparkline** — Optional 7-day trend line in tooltip via `showSparkline` config
+- **Status Bar** — Shows last update time and data source in status bar, click to refresh
+- **Detail External Links** — Quick links to CoinGecko / Binance in detail panel
+
+### Improvements
+
+- **Auto-refresh** — `refreshInterval` config now works (set 0 to disable)
+- **Config生效** — `defaultLimit`, `preferredDataSource`, `currency` all read from settings and trigger re-fetch on change
+- **Silent Refresh** — First load shows loading spinner, subsequent refreshes update in background without flicker
+- **Search** — Remembers previous search term, clear command, match count in title
+- **Sort Indicator** — Tree title shows current sort field and direction (`[MCap ↓]`, `[24h ↑]`)
+- **Loading/Error States** — Loading spinner on first load, error item with retry on API failure
+- **Detail Panel Reuse** — Reuses single webview panel instead of creating new ones
+- **Detail Layout** — Grid layout, adaptive price precision (2 decimals for large caps, 8 for small caps)
+- **XSS Fix** — All dynamic content in detail HTML is escaped
+
+### Refactoring
+
+- **Type Safety** — New `CoinMarket` interface, all `any` types eliminated
+- **API Config** — `CryptoApiConfig` interface formalized with `currency` and `sparkline` params
+- **API Failover** — Fixed hardcoded `% 2` modulo, `preferredDataSource` config now respected
+- **Dead Code Removed** — Deleted unused `WebviewProvider`, `htmlContent`, `node-fetch` dependency
+- **Build Artifacts** — Removed historical `.vsix` files from repository
+
+### Configuration Changes
+
+| Setting | Change |
+|---|---|
+| `cryptoPriceViewer.refreshInterval` | Now functional (was a no-op) |
+| `cryptoPriceViewer.defaultLimit` | Now functional (was a no-op) |
+| `cryptoPriceViewer.preferredDataSource` | Now functional (was a no-op) |
+| `cryptoPriceViewer.currency` | **New**, default `usd` |
+| `cryptoPriceViewer.showSparkline` | **New**, default `false` |
+
+---
 
 ## [2.0.2] - 2025-05-27
 
-### 功能改进
+### Improvements
 
-- **增强详细信息展示:** 在点击查看代币详情时，现在会以更美观、更结构化的方式展示信息。
-- **新增历史价格信息:** 详细信息视图和悬停提示中均添加了历史最高价 (ATH) 和历史最低价 (ATL) 的显示，包括对应的日期和价格变化百分比。
-- **优化数据显示:** 改进了价格、市值等数据的格式化方式，确保信息清晰易读。
+- Enhanced detail view with structured layout
+- Added ATH/ATL display with dates and percentages in tooltip and detail view
+- Improved price and market cap formatting
 
 ## [2.0.1] - 2025-02-24
 
-### 错误修复
+### Bug Fixes
 
-- 修复数据为空时可能导致应用崩溃的问题
-- 增强数据显示的健壮性，所有数值都增加了空值检查
-- 改进了价格、市值、交易量等数据的展示逻辑，现在会显示"N/A"而不是崩溃
+- Fixed crash when data fields are null
+- Added null checks to all numeric displays
+- Shows "N/A" instead of crashing on missing data
 
-### 功能改进
+### Improvements
 
-- 新增按市值排序功能，支持升序和降序切换
-- 新增按 24 小时涨跌幅排序功能，支持升序和降序切换
-- 优化排序后的用户提示，显示当前排序方式和顺序
+- Added sort by market cap (ascending/descending toggle)
+- Added sort by 24h price change (ascending/descending toggle)
+- Sort direction shown in notification message
 
 ## [2.0.0] - 2025-01-11
 
-### 功能改进
+### Improvements
 
-- 重构项目结构，优化代码组织
-- 使用 VS Code TreeView 重新设计界面
-- 添加备用数据源（Binance API），提高数据可靠性
-- 优化错误处理和自动重试机制
-- 改进数据持久化，切换视图时保持状态
+- Restructured project architecture
+- Redesigned UI with VS Code TreeView
+- Added Binance fallback API
+- Improved error handling and auto-retry
+- Data persistence across view switches
 
-### 新增功能
+### New Features
 
-- 添加锁仓信息显示（非全流通代币）
-- 支持查看详细的供应量信息
-- 优化价格和涨跌幅显示方式
-- 添加市值排名显示
-- 改进搜索功能的响应速度
+- Lock-up info display for non-fully circulating tokens
+- Detailed supply info view
+- Market cap ranking display
+- Improved search responsiveness
 
-### 界面优化
+### UI
 
-- 使用 VS Code 原生图标和主题
-- 优化数据加载时的骨架屏
-- 改进悬停提示的信息展示
-- 支持点击查看详细信息
-
-### 性能优化
-
-- 优化数据刷新机制
-- 改进数据缓存策略
-- 提升界面响应速度
+- Native VS Code icons and theme support
+- Loading skeleton screen
+- Enhanced tooltip with detailed info
+- Click-to-view detail panel
 
 ## [1.0.0] - 2024-12-17
 
-### 首次发布
+### Initial Release
 
-- 支持查看前 200 个加密货币的实时价格
-- 显示 24 小时涨跌幅和交易量数据
-- 提供市值排名和详细市场信息
-- 支持按名称和代号搜索
-- 显示流通量和供应量信息
-- 使用 CoinGecko API 作为数据源
-- 支持手动刷新数据
-- VS Code 原生界面设计
+- Top 200 cryptocurrency real-time prices
+- 24h price changes and volume
+- Market cap ranking and details
+- Search by name and symbol
+- Supply info display
+- CoinGecko API data source
+- Manual data refresh
+- Native VS Code UI
